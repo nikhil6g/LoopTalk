@@ -160,12 +160,19 @@ const Login = () => {
       >
         Get Guest User Credentials
       </Button>
-
-      <Text textAlign="center" fontSize="sm" mt={4} color="gray.500">
-        Don’t have an account?{" "}
-        <Text as="span" color="teal.500" fontWeight="bold" cursor="pointer">
-          Sign Up
-        </Text>
+      <Text
+        textAlign="center"
+        fontSize="sm"
+        mt={2}
+        color="teal.500"
+        cursor="pointer"
+        _hover={{ textDecoration: "underline" }}
+        onClick={() => {
+          // Trigger forgot password logic here
+          console.log("Forgot Password Clicked");
+        }}
+      >
+        Forgot Password?
       </Text>
     </VStack>
   );

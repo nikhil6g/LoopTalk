@@ -2,6 +2,8 @@ const asyncHandler = require("express-async-handler");
 const User = require("../models/userModel");
 const BlockList = require("../models/BlockListModel");
 const generateToken = require("../config/generateToken");
+const { generateOtp, hashOtp, isOtpExpired } = require("../utils/otp");
+const { sendEmail } = require("../utils/email");
 
 //@description     Get or Search all users
 //@route           GET /api/user?search=
@@ -147,7 +149,7 @@ const registerUser = asyncHandler(async (req, res) => {
 });
 
 //@description     Auth the user
-//@route           POST /api/users/login
+//@route           POST /api/user/login
 //@access          Public
 const authUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -168,10 +170,131 @@ const authUser = asyncHandler(async (req, res) => {
   }
 });
 
+// @description: Generate and send an OTP to the user via email.
+// @route: POST /api/user/generate-otp
+// @access: Public
+const generateOtpInMail = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    res.status(400);
+    throw new Error("Email is required.");
+  }
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found.");
+  }
+
+  const otp = generateOtp();
+  const hashedOtp = hashOtp(otp);
+  const otpExpiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes validity
+
+  user.otp = hashedOtp;
+  user.otpExpiresAt = otpExpiresAt;
+  await user.save();
+
+  try {
+    await sendEmail(email, otp);
+    res.status(200).json({ message: "OTP sent successfully to your email." });
+  } catch (err) {
+    console.error("Error sending email:", err);
+    res
+      .status(500)
+      .json({ message: "Failed to send OTP. Please try again later." });
+  }
+});
+
+// @description: Verify the OTP provided by the user.
+// @route: POST /api/user/verify-otp
+// @access: Public
+const verifyOtp = asyncHandler(async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    res.status(400);
+    throw new Error("Email and OTP are required.");
+  }
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found.");
+  }
+
+  if (!user.otp || !user.otpExpiresAt) {
+    res.status(400);
+    throw new Error("No OTP found. Please request a new one.");
+  }
+
+  if (isOtpExpired(user.otpExpiresAt)) {
+    res.status(400);
+    throw new Error("OTP has expired. Please request a new one.");
+  }
+
+  const hashedOtp = hashOtp(otp);
+
+  if (hashedOtp !== user.otp) {
+    res.status(400);
+    throw new Error("Invalid OTP.");
+  }
+
+  res.status(200).json({ message: "OTP verified successfully." });
+});
+
+// @description: Reset the user's password after OTP verification.
+// @route: POST /api/user/reset-password
+// @access: Public
+const resetPassword = asyncHandler(async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+
+  if (!email || !otp || !newPassword) {
+    res.status(400);
+    throw new Error("Email, OTP, and new password are required.");
+  }
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found.");
+  }
+
+  if (!user.otp || !user.otpExpiresAt) {
+    res.status(400);
+    throw new Error("No OTP found. Please request a new one.");
+  }
+
+  if (isOtpExpired(user.otpExpiresAt)) {
+    res.status(400);
+    throw new Error("OTP has expired. Please request a new one.");
+  }
+
+  const hashedOtp = hashOtp(otp);
+
+  if (hashedOtp !== user.otp) {
+    res.status(400);
+    throw new Error("Invalid OTP.");
+  }
+
+  user.password = newPassword;
+  user.otp = null;
+  user.otpExpiresAt = null;
+  await user.save();
+
+  res.status(200).json({ message: "Password reset successfully." });
+});
+
 module.exports = {
   allUsers,
   toggleBlockUser,
   registerUser,
   authUser,
   checkBlockStatus,
+  generateOtpInMail,
+  verifyOtp,
+  resetPassword,
 };

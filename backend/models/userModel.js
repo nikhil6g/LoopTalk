@@ -17,8 +17,10 @@ const userSchema = mongoose.Schema(
       required: true,
       default: false,
     },
+    otp: { type: String, default: null }, // Store the OTP as a string
+    otpExpiresAt: { type: Date, default: null }, // Store the expiry time for the OTP
   },
-  { timestaps: true }
+  { timestamps: true }
 );
 
 userSchema.methods.matchPassword = async function (enteredPassword) {
