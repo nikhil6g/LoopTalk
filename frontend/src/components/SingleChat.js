@@ -19,7 +19,7 @@ import animationData from "../animations/typing.json";
 import io from "socket.io-client";
 import GroupProfileModal from "./miscellaneous/GroupProfileModal";
 import { ChatState } from "../Context/ChatProvider";
-const ENDPOINT = "http://0.0.0.0:5000"; // "https://loop-talk.herokuapp.com"; -> After deployment
+const ENDPOINT = "http://localhost:5000"; // "https://loop-talk.herokuapp.com"; -> After deployment
 var socket, selectedChatCompare;
 
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {

@@ -11,10 +11,11 @@ Uses Socket.io for real time communication and stores user details in encrypted 
 4. **One-to-One Messaging**: Send direct messages to other users.
 5. **Group Chats**: Create and manage group chats with multiple users.
 6. **Broadcast Messages**: Send broadcast messages to selected users.
-7. **Profile Viewing**: View profiles of groups and individual users, including your own.
+7. **Profile Viewing**: View profiles of groups and individual users, including own.
 8. **Block/Unblock**: Block or unblock users to control who can send you messages.
 9. **Real-Time Chat**: Enjoy real-time messaging with instant updates.
 10. **Typing Indicators**: See when someone is typing a message in real-time.
+11. **Reset Password**: Reset user password using an OTP sent to user's email.
 
 ## Tech Stack
 
@@ -56,6 +57,8 @@ Create .env file in root folder and assign these variables with suitable values
 MONGO_URI=
 JWT_SECRET=
 PORT=
+EMAIL_ID=
+EMAIL_APP_PASSWORD=
 
 Start the server
 

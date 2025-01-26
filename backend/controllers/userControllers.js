@@ -187,7 +187,14 @@ const generateOtpInMail = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("User not found.");
   }
-
+  if (
+    user.otp &&
+    user.otpExpiresAt &&
+    user.otpExpiresAt - 8 * 60 * 1000 < Date.now()
+  ) {
+    res.status(400);
+    throw new Error("OTP is already sent to your email.");
+  }
   const otp = generateOtp();
   const hashedOtp = hashOtp(otp);
   const otpExpiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes validity

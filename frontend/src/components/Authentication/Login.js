@@ -11,7 +11,7 @@ import axios from "axios";
 // React Hooks makes the code easier to read and write.
 import { useState } from "react";
 import { useToast, Text } from "@chakra-ui/react";
-import { useHistory } from "react-router-dom";
+import { useHistory, Link } from "react-router-dom";
 import { ChatState } from "../../Context/ChatProvider";
 
 //The Login function is a React functional component that returns a JSX representation of a login form.
@@ -172,7 +172,7 @@ const Login = () => {
           console.log("Forgot Password Clicked");
         }}
       >
-        Forgot Password?
+        <Link to="/reset-password">Forgot Password?</Link>
       </Text>
     </VStack>
   );

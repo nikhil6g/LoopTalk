@@ -18,13 +18,17 @@ import {
   AlertDialogHeader,
   AlertDialogContent,
   AlertDialogOverlay,
+  Icon,
 } from "@chakra-ui/react";
 import { useRef } from "react";
 import { useToast } from "@chakra-ui/toast";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { VStack, Box } from "@chakra-ui/layout";
+import { useHistory } from "react-router-dom";
 
 const ProfileModal = ({ user, children, loggedUser }) => {
+  const history = useHistory();
   const [isBlocked, setIsBlocked] = useState(false);
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -98,6 +102,9 @@ const ProfileModal = ({ user, children, loggedUser }) => {
     }
   }, [loggedUser._id, user._id]);
 
+  const onChangeUsername = () => {};
+  const onUpdateProfilePic = () => {};
+
   return (
     <>
       {children ? (
@@ -114,9 +121,20 @@ const ProfileModal = ({ user, children, loggedUser }) => {
         <ModalOverlay />
         <ModalContent
           borderRadius="lg"
-          boxShadow="lg"
+          boxShadow="2xl"
           bgGradient="linear(to-r, teal.400, teal.600)"
+          position="relative"
+          overflow="hidden"
         >
+          {/* Enhanced Background */}
+          <Box
+            position="absolute"
+            inset="0"
+            bgGradient="radial(teal.500, teal.800)"
+            zIndex={-1}
+            opacity={0.5}
+          />
+
           <ModalHeader
             fontSize="36px"
             fontFamily="Work sans"
@@ -135,14 +153,55 @@ const ProfileModal = ({ user, children, loggedUser }) => {
             justifyContent="center"
             p={6}
           >
-            <Image
-              borderRadius="full"
-              boxSize="150px"
-              src={user.pic}
-              alt={user.name}
-              boxShadow="xl"
-              mb={4}
-            />
+            {/* Profile Picture with Camera Icon */}
+            <Box position="relative" mb={4}>
+              <Box
+                position="relative"
+                _hover={{
+                  cursor: "pointer",
+                  ".profile-icon": {
+                    opacity: 1,
+                  },
+                }}
+              >
+                <Image
+                  borderRadius="full"
+                  boxSize="150px"
+                  src={user.pic}
+                  alt={user.name}
+                  boxShadow="xl"
+                  _hover={{
+                    transform: "scale(1.1)",
+                    transition: "all 0.3s ease-in-out",
+                  }}
+                />
+                {loggedUser._id === user._id && (
+                  <Box
+                    className="profile-icon"
+                    position="absolute"
+                    bottom="10px"
+                    right="10px"
+                    bg="white"
+                    borderRadius="full"
+                    p={2}
+                    boxShadow="lg"
+                    cursor="pointer"
+                    onClick={onUpdateProfilePic}
+                    _hover={{ bg: "teal.500", color: "white" }}
+                    transition="all 0.3s"
+                    opacity={0}
+                  >
+                    <Icon viewBox="0 0 24 24" boxSize={6} color="teal.600">
+                      <path
+                        fill="currentColor"
+                        d="M12 5.5C8.963 5.5 6.5 7.963 6.5 11S8.963 16.5 12 16.5 17.5 14.037 17.5 11 15.037 5.5 12 5.5zM12 4c3.866 0 7 3.134 7 7s-3.134 7-7 7-7-3.134-7-7 3.134-7 7-7zM22 7H19.334L18.102 5H5.898L4.666 7H2V19H22V7z"
+                      />
+                    </Icon>
+                  </Box>
+                )}
+              </Box>
+            </Box>
+
             <Text
               fontSize="lg"
               fontFamily="Work sans"
@@ -152,6 +211,36 @@ const ProfileModal = ({ user, children, loggedUser }) => {
             >
               Email: {user.email}
             </Text>
+
+            {loggedUser._id === user._id && (
+              <VStack spacing={4} mt={6} w="full">
+                {/* Change Username */}
+                <Button
+                  bg="white"
+                  color="teal.600"
+                  _hover={{ bg: "teal.100" }}
+                  w="full"
+                  fontWeight="bold"
+                  onClick={onChangeUsername}
+                >
+                  Change Username
+                </Button>
+
+                {/* Reset Password */}
+                <Button
+                  bg="red.500"
+                  color="white"
+                  _hover={{ bg: "red.400" }}
+                  w="full"
+                  fontWeight="bold"
+                  onClick={() => {
+                    history.push("/reset-password");
+                  }}
+                >
+                  Reset Password
+                </Button>
+              </VStack>
+            )}
           </ModalBody>
           <ModalFooter d="flex" justifyContent="space-between">
             {loggedUser._id !== user._id ? (
