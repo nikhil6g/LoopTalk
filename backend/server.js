@@ -120,3 +120,4 @@ io.on("connection", (socket) => {
     socket.leave(userData._id);
   });
 });
+module.exports = app;
