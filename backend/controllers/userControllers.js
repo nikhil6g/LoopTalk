@@ -165,8 +165,7 @@ const authUser = asyncHandler(async (req, res) => {
       token: generateToken(user._id),
     });
   } else {
-    res.status(401);
-    throw new Error("Invalid Email or Password");
+    res.status(401).json({ message: "Invalid Email or Password" });
   }
 });
 
@@ -190,7 +189,7 @@ const generateOtpInMail = asyncHandler(async (req, res) => {
   if (
     user.otp &&
     user.otpExpiresAt &&
-    user.otpExpiresAt - 8 * 60 * 1000 < Date.now()
+    user.otpExpiresAt - 8 * 60 * 1000 > Date.now()
   ) {
     res.status(400);
     throw new Error("OTP is already sent to your email.");

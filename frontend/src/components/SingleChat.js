@@ -47,7 +47,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       setLoading(true);
 
       const { data } = await axios.get(
-        `/api/message/${selectedChat._id}`,
+        `${process.env.REACT_APP_API_BASE_URL}/api/message/${selectedChat._id}`,
         config
       );
       setMessages(data);
@@ -69,7 +69,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   };
 
   const sendMessage = async (event) => {
-    if (event.key === "Enter" && newMessage) {
+    if (newMessage) {
       socket.emit("stop typing", selectedChat._id);
       try {
         const config = {
@@ -80,7 +80,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         };
         setNewMessage("");
         const { data } = await axios.post(
-          "/api/message",
+          `${process.env.REACT_APP_API_BASE_URL}/api/message`,
           {
             content: newMessage,
             chatId: selectedChat,
@@ -241,7 +241,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
             )}
 
             <FormControl
-              onKeyDown={sendMessage}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage(e)}
               id="first-name"
               isRequired
               mt={3}

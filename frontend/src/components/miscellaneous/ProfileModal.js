@@ -28,8 +28,10 @@ import { VStack, Box } from "@chakra-ui/layout";
 import { useHistory } from "react-router-dom";
 
 const ProfileModal = ({ user, children, loggedUser }) => {
-  const history = useHistory();
   const [isBlocked, setIsBlocked] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const history = useHistory();
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const {
@@ -41,6 +43,7 @@ const ProfileModal = ({ user, children, loggedUser }) => {
 
   // Placeholder function for block logic
   const blockUser = async () => {
+    setLoading(true);
     try {
       const config = {
         headers: {
@@ -50,7 +53,11 @@ const ProfileModal = ({ user, children, loggedUser }) => {
       console.log(`Bearer ${loggedUser.token}`);
       const userId = user._id;
 
-      await axios.post("/api/user/block", { userId }, config);
+      await axios.post(
+        `${process.env.REACT_APP_API_BASE_URL}/api/user/block`,
+        { userId },
+        config
+      );
 
       toast({
         title: isBlocked ? "User Unblocked" : "User Blocked",
@@ -77,7 +84,9 @@ const ProfileModal = ({ user, children, loggedUser }) => {
         position: "top",
       });
     }
+    setLoading(false);
   };
+
   const initialBlockCheck = async () => {
     try {
       const config = {
@@ -87,7 +96,7 @@ const ProfileModal = ({ user, children, loggedUser }) => {
       };
 
       const { data } = await axios.get(
-        `/api/user/check-block-status?userId=${user._id}`,
+        `${process.env.REACT_APP_API_BASE_URL}/api/user/check-block-status?userId=${user._id}`,
         config
       );
 
@@ -291,6 +300,7 @@ const ProfileModal = ({ user, children, loggedUser }) => {
                 colorScheme={isBlocked ? "green" : "red"}
                 onClick={blockUser}
                 ml={3}
+                isLoading={loading}
               >
                 {isBlocked ? "Unblock" : "Block"}
               </Button>

@@ -20,6 +20,7 @@ const ResetPassword = () => {
   const [otp, setOtp] = useState("");
   const [email, setEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isOtpSent, setIsOtpSent] = useState(false);
   const toast = useToast();
   const history = useHistory();
@@ -27,7 +28,10 @@ const ResetPassword = () => {
   const handleSendOtp = async () => {
     try {
       setIsOtpSent(true);
-      const { message } = await axios.post("/api/user/generate-otp", { email });
+      const { message } = await axios.post(
+        `${process.env.REACT_APP_API_BASE_URL}/api/user/generate-otp`,
+        { email }
+      );
       console.log(message);
       setTimeout(() => {
         setIsOtpSent(false); // End the loading state
@@ -56,8 +60,8 @@ const ResetPassword = () => {
         )
       ) {
         setStep(2);
-        setIsOtpSent(false);
       }
+      setIsOtpSent(false);
     }
   };
 
@@ -68,13 +72,53 @@ const ResetPassword = () => {
     }, 2000);
   };
 
-  const handleResetPassword = async () => {
+  const handleVerifyOtp = async () => {
     try {
-      const { message } = await axios.post("/api/user/reset-password", {
-        email,
-        otp,
-        newPassword,
+      const { data } = await axios.post(
+        `${process.env.REACT_APP_API_BASE_URL}/api/user/verify-otp`,
+        { email, otp }
+      );
+      console.log(data.message);
+      toast({
+        title: "OTP Verified!",
+        description: "Proceed to reset your password.",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
       });
+      setStep(3);
+    } catch (err) {
+      toast({
+        title: "Invalid OTP!",
+        description: "Please check the OTP and try again.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "bottom",
+      });
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Password Mismatch!",
+        description: "Passwords do not match. Please try again.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+    try {
+      const { message } = await axios.post(
+        `${process.env.REACT_APP_API_BASE_URL}/api/user/reset-password`,
+        {
+          email,
+          otp,
+          newPassword,
+        }
+      );
       console.log(message);
       toast({
         title: "Password Reset Successful!",
@@ -179,7 +223,7 @@ const ResetPassword = () => {
                       </Button>
                       <Button
                         colorScheme="teal"
-                        onClick={() => setStep(3)}
+                        onClick={handleVerifyOtp}
                         isDisabled={!otp}
                       >
                         Verify OTP
@@ -199,12 +243,20 @@ const ResetPassword = () => {
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                     />
+                    <Input
+                      type="text"
+                      placeholder="Confirm Password"
+                      size="lg"
+                      focusBorderColor="teal.500"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
                     <Button
                       colorScheme="blue"
                       w="full"
                       mt={4}
                       onClick={handleResetPassword}
-                      isDisabled={!newPassword}
+                      isDisabled={!newPassword || !confirmPassword}
                     >
                       Reset Password
                     </Button>

@@ -5,8 +5,19 @@ import { useEffect, useState } from "react";
 import { getSender } from "../config/ChatLogics";
 import ChatLoading from "./ChatLoading";
 import GroupCreationModal from "./miscellaneous/GroupCreationModal";
-import { Button, Menu, MenuButton, MenuList, MenuItem } from "@chakra-ui/react";
+import {
+  Button,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  Image,
+} from "@chakra-ui/react";
 import { ChatState } from "../Context/ChatProvider";
+import { motion } from "framer-motion"; // for animation
+import dayjs from "dayjs"; // for formatting the time
+import relativeTime from "dayjs/plugin/relativeTime";
+dayjs.extend(relativeTime);
 
 const MyChats = ({ fetchAgain }) => {
   const [loggedUser, setLoggedUser] = useState();
@@ -15,15 +26,27 @@ const MyChats = ({ fetchAgain }) => {
 
   const toast = useToast();
 
+  const getRandomGroupImage = () => {
+    const groupImages = [
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTQgH7hfzVMVgqIFuiLS-pM3fijMZfLWK5Lrg&s",
+      "https://media.istockphoto.com/id/1078838084/vector/five-sitting-business-executives-people-in-a-meeting-logo.jpg?s=612x612&w=0&k=20&c=RXHl2sJSx9HzzB0g5ruvonu_pBQx8gaDMOZWRN8b3L0=",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQoEIrNMCipxZtPKTwB24xMN28c6YtiuBeK3g&s",
+    ];
+    return groupImages[Math.floor(Math.random() * groupImages.length)];
+  };
+
   const fetchChats = async () => {
     // console.log(user._id);
     try {
-      const response = await fetch("/api/chat", {
-        method: "GET", // HTTP method
-        headers: {
-          Authorization: `Bearer ${user.token}`, // Include token in the header
-        },
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_BASE_URL}/api/chat`,
+        {
+          method: "GET", // HTTP method
+          headers: {
+            Authorization: `Bearer ${user.token}`, // Include token in the header
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Network response was not ok");
@@ -172,45 +195,85 @@ const MyChats = ({ fetchAgain }) => {
         {chats ? (
           <Stack overflowY="auto">
             {chats.map((chat) => (
-              <Box
-                onClick={() => setSelectedChat(chat)}
-                cursor="pointer"
-                bg={selectedChat === chat ? "#38B2AC" : "#E8E8E8"}
-                color={selectedChat === chat ? "white" : "black"}
-                px={4}
-                py={3}
-                borderRadius="lg"
+              <motion.div
                 key={chat._id}
-                _hover={{
-                  bg: selectedChat === chat ? "#38B2AC" : "#D3D3D3",
-                  boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
-                }}
-                transition="all 0.3s ease"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
               >
-                <Text
-                  fontSize="md"
-                  fontWeight="bold"
-                  color={selectedChat === chat ? "white" : "teal.600"}
+                <Box
+                  onClick={() => setSelectedChat(chat)}
+                  cursor="pointer"
+                  bg={selectedChat === chat ? "#38B2AC" : "#E8E8E8"}
+                  color={selectedChat === chat ? "white" : "black"}
+                  px={4}
+                  py={3}
+                  borderRadius="lg"
+                  _hover={{
+                    bg: selectedChat === chat ? "#38B2AC" : "#D3D3D3",
+                    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+                  }}
+                  transition="all 0.3s ease"
                 >
-                  {!chat.isGroupChat
-                    ? getSender(loggedUser, chat.users)
-                    : !chat.isBroadcast
-                    ? chat.chatName
-                    : `Broadcast: ${chat.chatName}`}
-                </Text>
-                {chat.latestMessage && (
-                  <Text
-                    fontSize="xs"
-                    mt={1}
-                    color={selectedChat === chat ? "teal.100" : "gray.600"}
-                  >
-                    <b>{chat.latestMessage.sender.name} : </b>
-                    {chat.latestMessage.content.length > 50
-                      ? chat.latestMessage.content.substring(0, 51) + "..."
-                      : chat.latestMessage.content}
-                  </Text>
-                )}
-              </Box>
+                  <Box d="flex" alignItems="center">
+                    {/* Profile Image */}
+                    <Image
+                      src={
+                        !chat.isGroupChat
+                          ? !chat.latestMessage
+                            ? "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg"
+                            : chat.latestMessage.sender.pic
+                          : chat.isBroadcast
+                          ? "/broadcastIcon.png" // Use a custom broadcast image
+                          : getRandomGroupImage() // Random group image for group chats
+                      }
+                      alt="Profile"
+                      boxSize="40px"
+                      borderRadius="full"
+                      mr={3}
+                      objectFit="cover"
+                    />
+                    <Box flex="1">
+                      <Text
+                        fontSize="md"
+                        fontWeight="bold"
+                        color={selectedChat === chat ? "white" : "teal.600"}
+                      >
+                        {!chat.isGroupChat
+                          ? getSender(loggedUser, chat.users)
+                          : !chat.isBroadcast
+                          ? chat.chatName
+                          : `Broadcast: ${chat.chatName}`}
+                      </Text>
+                      {chat.latestMessage && (
+                        <Text
+                          fontSize="xs"
+                          mt={1}
+                          color={
+                            selectedChat === chat ? "teal.100" : "gray.600"
+                          }
+                        >
+                          <b>{chat.latestMessage.sender.name} : </b>
+                          {chat.latestMessage.content.length > 50
+                            ? chat.latestMessage.content.substring(0, 51) +
+                              "..."
+                            : chat.latestMessage.content}
+                        </Text>
+                      )}
+                    </Box>
+                    {/* Message Time */}
+                    <Text
+                      fontSize="xs"
+                      color={selectedChat === chat ? "teal.100" : "gray.500"}
+                      textAlign="right"
+                    >
+                      {chat.latestMessage
+                        ? dayjs(chat.latestMessage.createdAt).fromNow() // Using day.js for time formatting
+                        : "No messages"}
+                    </Text>
+                  </Box>
+                </Box>
+              </motion.div>
             ))}
           </Stack>
         ) : (
