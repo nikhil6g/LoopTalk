@@ -1,9 +1,13 @@
 {
+  "name": "loop-talk",
+  "version": "2.0.0",
+  "description": "",
+  "main": "server.js",
   "scripts": {
     "start": "node backend/server.js",
     "server": "nodemon backend/server.js",
     "client": "cd frontend && pnpm dev",
-    "build": "cd frontend && pnpm build",
+    "build": "cd frontend && pnpm install --prod=false && pnpm build",
     "dev": "concurrently \"pnpm server\" \"pnpm client\""
   },
   "keywords": [

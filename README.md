@@ -44,12 +44,12 @@ Go to the project directory
 Install dependencies
 
 ```bash
-  npm install
+  pnpm install
 ```
 
 ```bash
   cd frontend/
-  npm install
+  pnpm install
 ```
 
 Create .env file in root folder and assign these variables with suitable values
@@ -63,15 +63,13 @@ EMAIL_APP_PASSWORD=
 Start the server
 
 ```bash
-  npm run start
+  pnpm start
 ```
 
 Start the Client
 
 ```bash
-  //open now terminal
-  cd frontend
-  npm start
+  pnpm client
 ```
 
 # Screenshots
