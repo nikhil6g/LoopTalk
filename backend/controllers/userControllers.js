@@ -1,6 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const User = require("../models/userModel");
-const BlockList = require("../models/BlockListModel");
+const BlockList = require("../models/blockListModel");
 const generateToken = require("../config/generateToken");
 const { generateOtp, hashOtp, isOtpExpired } = require("../utils/otp");
 const { sendEmail } = require("../utils/email");
