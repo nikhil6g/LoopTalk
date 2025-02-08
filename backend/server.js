@@ -5,6 +5,8 @@ const userRoutes = require("./routes/userRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
+const { authenticateUser } = require("./middleware/authMiddleware");
+
 const path = require("path");
 const cors = require("cors");
 
@@ -67,17 +69,24 @@ const io = require("socket.io")(server, {
   },
 });
 
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token;
+    socket.user = await authenticateUser(token);
+    next();
+  } catch (error) {
+    console.error("Socket Auth Error:", error);
+    return next(new Error("Authentication failed"));
+  }
+});
+
 io.on("connection", (socket) => {
   console.log("Connected to socket.io");
 
-  try {
-    socket.on("setup", (userData) => {
-      socket.join(userData._id);
-      socket.emit("connected");
-    });
-  } catch (err) {
-    console.error("Socket setup error: ", err);
-  }
+  socket.on("setup", (userData) => {
+    socket.join(userData._id);
+    socket.emit("connected");
+  });
 
   socket.on("join chat", (room) => {
     socket.join(room);
@@ -87,10 +96,10 @@ io.on("connection", (socket) => {
   socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
   socket.on("new message", (newMessageRecieved) => {
-    //console.log(newMessageRecieved);
     if (newMessageRecieved.length > 1) {
+      // this is broadcast message , and newMessageRecieved[0] is the group chat for the broadcast message
       newMessageRecieved = newMessageRecieved.slice(1);
-      //console.log(newMessageRecieved);
+
       newMessageRecieved.forEach((message) => {
         var chat = message.chat;
 
@@ -115,9 +124,9 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.off("setup", () => {
+  socket.on("disconnect", () => {
     console.log("USER DISCONNECTED");
-    socket.leave(userData._id);
+    socket.leave(socket.user?._id);
   });
 });
 module.exports = app;

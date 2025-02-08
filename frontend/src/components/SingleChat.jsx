@@ -129,7 +129,12 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   };
 
   useEffect(() => {
-    socket = io(import.meta.env.VITE_APP_SOKCET_ENDPOINT);
+    socket = io(import.meta.env.VITE_APP_SOKCET_ENDPOINT, {
+      auth: {
+        token: user.token,
+      },
+    });
+
     socket.emit("setup", user);
     socket.on("connected", () => setSocketConnected(true));
     socket.on("typing", () => setIsTyping(true));
