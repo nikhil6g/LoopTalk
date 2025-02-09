@@ -62,7 +62,6 @@ const GroupCreationModal = ({ children, isBroadcast = false }) => {
         `${import.meta.env.VITE_APP_API_BASE_URL}/api/user?search=${search}`,
         config
       );
-      console.log(data);
       setLoading(false);
       setSearchResult(data);
     } catch (error) {

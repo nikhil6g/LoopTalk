@@ -6,6 +6,7 @@ const chatRoutes = require("./routes/chatRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const { authenticateUser } = require("./middleware/authMiddleware");
+const { sendMessageHandler } = require("./controllers/messageControllers");
 
 const path = require("path");
 const cors = require("cors");
@@ -95,33 +96,43 @@ io.on("connection", (socket) => {
   socket.on("typing", (room) => socket.in(room).emit("typing"));
   socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
-  socket.on("new message", (newMessageRecieved) => {
-    if (newMessageRecieved.length > 1) {
-      // this is broadcast message , and newMessageRecieved[0] is the group chat for the broadcast message
-      newMessageRecieved = newMessageRecieved.slice(1);
+  const handleNewMessage = async (senderId, content, chatId) => {
+    try {
+      let messages = await sendMessageHandler(senderId, content, chatId);
+      if (messages.length > 1) {
+        // this is broadcast message , and messages[0] is the group chat for the broadcast message
+        messages = messages.slice(1);
+        messages.forEach((message) => {
+          var chat = message.chat;
 
-      newMessageRecieved.forEach((message) => {
-        var chat = message.chat;
+          if (!chat.users) return console.log("chat.users not defined");
+          chat.users.forEach((user) => {
+            if (user._id.toString() === message.sender._id.toString()) return;
+
+            socket.in(user._id.toString()).emit("message recieved", message);
+          });
+        });
+      } else {
+        var chat = messages[0].chat;
 
         if (!chat.users) return console.log("chat.users not defined");
 
         chat.users.forEach((user) => {
-          if (user._id == message.sender._id) return;
-
-          socket.in(user._id).emit("message recieved", message);
+          if (user._id.toString() === messages[0].sender._id.toString()) return;
+          socket.in(user._id.toString()).emit("message recieved", messages[0]);
         });
-      });
-    } else {
-      var chat = newMessageRecieved[0].chat;
-
-      if (!chat.users) return console.log("chat.users not defined");
-
-      chat.users.forEach((user) => {
-        if (user._id == newMessageRecieved[0].sender._id) return;
-
-        socket.in(user._id).emit("message recieved", newMessageRecieved[0]);
-      });
+      }
+      socket.emit("Message sended", messages[0]);
+    } catch (error) {
+      console.log(error.message);
+      socket.emit("Error", { message: error.message });
     }
+  };
+
+  socket.on("New message", (newMessage) => {
+    const { content, chatId, senderId } = newMessage;
+
+    handleNewMessage(senderId, content, chatId);
   });
 
   socket.on("disconnect", () => {

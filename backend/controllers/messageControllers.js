@@ -19,6 +19,8 @@ const allMessages = asyncHandler(async (req, res) => {
   }
 });
 
+//Unused api just for testing purpose
+
 //@description     Create New Message
 //@route           POST /api/Message/
 //@access          Protected
@@ -62,7 +64,6 @@ const sendMessage = asyncHandler(async (req, res) => {
       if (!receiver) {
         return res.status(400).json({ message: "Invalid chat participants." });
       }
-
       const receiverId = receiver._id.toString();
 
       if (blockedBySender.has(receiverId)) {
@@ -165,4 +166,116 @@ const sendMessage = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { allMessages, sendMessage };
+const sendMessageHandler = async (senderId, content, chatId) => {
+  if (!content || !chatId) {
+    throw new Error("Invalid data passed into request.");
+  }
+
+  const chat = await Chat.findById(chatId).populate("users", "-password");
+
+  if (!chat) {
+    throw new Error("Chat not found.");
+  }
+
+  const blockedUsers = await BlockList.find({
+    $or: [{ blocker: senderId }, { blocked: senderId }],
+  }).select("blocker blocked");
+
+  const blockedBySender = new Set(
+    blockedUsers
+      .filter((b) => b.blocker.toString() === senderId.toString())
+      .map((b) => b.blocked.toString())
+  );
+
+  const blockedSender = new Set(
+    blockedUsers
+      .filter((b) => b.blocked.toString() === senderId.toString())
+      .map((b) => b.blocker.toString())
+  );
+
+  if (!chat.isBroadcast && chat.users.length === 2) {
+    const receiver = chat.users.find(
+      (user) => user._id.toString() !== senderId.toString()
+    );
+
+    if (!receiver) {
+      throw new Error("Invalid chat participants.");
+    }
+
+    const receiverId = receiver._id.toString();
+
+    if (blockedBySender.has(receiverId)) {
+      throw new Error(`You have blocked ${receiver.name}.`);
+    }
+
+    if (blockedSender.has(receiverId)) {
+      throw new Error(`${receiver.name} blocked you.`);
+    }
+  }
+  const messages = [];
+  const newMessage = { sender: senderId, content: content, chat: chatId };
+  let message = await Message.create(newMessage);
+
+  await message.populate("sender", "name pic");
+  await message.populate("chat");
+  await message.populate({ path: "chat.users", select: "name pic email" });
+
+  await Chat.findByIdAndUpdate(chatId, { latestMessage: message });
+  messages.push(message);
+
+  if (chat.isBroadcast) {
+    const recipients = chat.users.filter((user) => {
+      const userId = user._id.toString();
+      return (
+        userId !== senderId.toString() &&
+        !blockedBySender.has(userId) &&
+        !blockedSender.has(userId)
+      );
+    });
+    for (const recipient of recipients) {
+      if (recipient._id.toString() === senderId.toString()) continue;
+
+      let isChat = await Chat.find({
+        isGroupChat: false,
+        $and: [
+          { users: { $elemMatch: { $eq: senderId } } },
+          { users: { $elemMatch: { $eq: recipient._id } } },
+        ],
+      })
+        .populate("users", "-password")
+        .populate("latestMessage");
+      if (isChat.length === 0) {
+        const chatData = {
+          chatName: "sender",
+          isGroupChat: false,
+          users: [senderId, recipient._id],
+        };
+
+        const createdChat = await Chat.create(chatData);
+        isChat = await Chat.findOne({ _id: createdChat._id }).populate(
+          "users",
+          "-password"
+        );
+      } else {
+        isChat = isChat[0];
+      }
+
+      const newMessage = { sender: senderId, content, chat: isChat._id };
+      let message = await Message.create(newMessage);
+      await message.populate("sender", "name pic");
+      await message.populate("chat");
+      await message.populate({ path: "chat.users", select: "name pic email" });
+
+      await Chat.findByIdAndUpdate(isChat._id, { latestMessage: message });
+
+      messages.push(message);
+    }
+  }
+  return messages;
+};
+
+module.exports = {
+  allMessages,
+  sendMessage,
+  sendMessageHandler,
+};

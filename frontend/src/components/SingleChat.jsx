@@ -77,54 +77,13 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const sendMessage = async (event) => {
     if (newMessage) {
       socket.emit("stop typing", selectedChat._id);
-      try {
-        const config = {
-          headers: {
-            "Content-type": "application/json",
-            Authorization: `Bearer ${user.token}`,
-          },
-        };
-        setNewMessage("");
-        const { data } = await axios.post(
-          `${import.meta.env.VITE_APP_API_BASE_URL}/api/message`,
-          {
-            content: newMessage,
-            chatId: selectedChat,
-          },
-          config
-        );
-        console.log(data);
-        socket.emit("new message", data);
-        setMessages([...messages, data[0]]);
-      } catch (error) {
-        if (error.response.status === 403) {
-          //handle blocking related error
-          toast({
-            title: "Error Occured!",
-            description: error.response.data.message.startsWith(
-              "You have blocked"
-            )
-              ? `${error.response.data.message} Unblock first to resume communication.`
-              : `${error.response.data.message} You cannot send messages.`,
-            status: "warning",
-            duration: 5000,
-            isClosable: true,
-            position: "bottom",
-          });
-        } else {
-          //handle general error
-          toast({
-            title: "Error Occurred",
-            description:
-              error.response?.data?.message ||
-              "Failed to send messages. Please try again.",
-            status: "error",
-            duration: 5000,
-            isClosable: true,
-            position: "bottom",
-          });
-        }
-      }
+      const message = {
+        senderId: user._id,
+        content: newMessage,
+        chatId: selectedChat._id,
+      };
+      setNewMessage("");
+      socket.emit("New message", message);
     }
   };
 
@@ -139,7 +98,41 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     socket.on("connected", () => setSocketConnected(true));
     socket.on("typing", () => setIsTyping(true));
     socket.on("stop typing", () => setIsTyping(false));
+    socket.on("Message sended", (message) => {
+      setMessages((prevMessages) => [...prevMessages, message]);
+    });
 
+    socket.on("Error", (errorData) => {
+      if (errorData.message.startsWith("You have blocked")) {
+        toast({
+          title: "Error Occurred!",
+          description: `${errorData.message} Unblock first to resume communication.`,
+          status: "warning",
+          duration: 5000,
+          isClosable: true,
+          position: "bottom",
+        });
+      } else if (errorData.message.includes("blocked you")) {
+        toast({
+          title: "Error Occurred!",
+          description: `${errorData.message} You cannot send messages.`,
+          status: "warning",
+          duration: 5000,
+          isClosable: true,
+          position: "bottom",
+        });
+      } else {
+        toast({
+          title: "Error Occurred",
+          description:
+            errorData.message || "Failed to send message. Please try again.",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+          position: "bottom",
+        });
+      }
+    });
     // eslint-disable-next-line
   }, []);
 
@@ -161,10 +154,10 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
           setFetchAgain(!fetchAgain);
         }
       } else {
-        setMessages([...messages, newMessageRecieved]);
+        setMessages((prevMessages) => [...prevMessages, newMessageRecieved]);
       }
     });
-  });
+  }, []);
 
   const typingHandler = (e) => {
     setNewMessage(e.target.value);
