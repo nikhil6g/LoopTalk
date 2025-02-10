@@ -6,7 +6,12 @@ const chatRoutes = require("./routes/chatRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const { authenticateUser } = require("./middleware/authMiddleware");
-const { sendMessageHandler } = require("./controllers/messageControllers");
+const {
+  sendMessageHandler,
+  getAiResponse,
+} = require("./controllers/messageControllers");
+const Message = require("./models/messageModel");
+const Chat = require("./models/chatModel");
 
 const path = require("path");
 const cors = require("cors");
@@ -98,6 +103,42 @@ io.on("connection", (socket) => {
 
   const handleNewMessage = async (senderId, content, chatId) => {
     try {
+      const currentChat = await Chat.findById(chatId).populate("users");
+      //handle ai chat bot response
+      var isBot = false;
+      var botId = null;
+      if (currentChat.users.length == 2) {
+        currentChat.users.forEach((user) => {
+          if (user._id.toString() !== senderId && user.email.endsWith("bot")) {
+            isBot = true;
+            botId = user._id;
+          }
+        });
+      }
+
+      if (isBot) {
+        const messageForBot = await Message.create({
+          chat: chatId,
+          sender: senderId,
+          content: content,
+          readBy: botId,
+        });
+
+        await messageForBot.populate("sender", "name pic");
+        await messageForBot.populate("chat");
+        await messageForBot.populate({
+          path: "chat.users",
+          select: "name pic email",
+        });
+
+        socket.emit("Message sended", messageForBot);
+        socket.emit("typing");
+        const botMessage = await getAiResponse(content, senderId, chatId);
+        socket.emit("message recieved", botMessage);
+        socket.emit("stop typing");
+        return;
+      }
+
       let messages = await sendMessageHandler(senderId, content, chatId);
       if (messages.length > 1) {
         // this is broadcast message , and messages[0] is the group chat for the broadcast message

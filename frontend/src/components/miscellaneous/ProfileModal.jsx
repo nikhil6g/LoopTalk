@@ -363,7 +363,7 @@ const ProfileModal = ({ user, children, loggedUser }) => {
             )}
           </ModalBody>
           <ModalFooter display="flex" justifyContent="space-between">
-            {loggedUser._id !== user._id ? (
+            {loggedUser._id !== user._id && !user.email.endsWith("bot") ? (
               <Button
                 bg={isBlocked ? "teal.800" : "red.500"}
                 color="white"

@@ -5,17 +5,18 @@ Uses Socket.io for real time communication and stores user details in encrypted 
 
 ## Features
 
-1. **Authentication**: Secure login and sign-up screens with email and password authentication.
-2. **User Search**: Search for other users by email or username.
-3. **Notifications**: Get notified instantly when a new message arrives.
-4. **One-to-One Messaging**: Send direct messages to other users.
-5. **Group Chats**: Create and manage group chats with multiple users.
-6. **Broadcast Messages**: Send broadcast messages to selected users.
-7. **Profile Viewing**: View profiles of groups and individual users, including own.
-8. **Block/Unblock**: Block or unblock users to control who can send you messages.
-9. **Real-Time Chat**: Enjoy real-time messaging with instant updates.
-10. **Typing Indicators**: See when someone is typing a message in real-time.
-11. **Reset Password**: Reset user password using an OTP sent to user's email.
+1. **🔒 Authentication**: Secure login and sign-up screens with email and password authentication.
+2. **🔍 User Search**: Search for other users by email or username.
+3. **🔔 Notifications**: Get notified instantly when a new message arrives.
+4. **💬 One-to-One Messaging**: Send direct messages to other users.
+5. **👥 Group Chats**: Create and manage group chats with multiple users.
+6. **📢 Broadcast Messages**: Send broadcast messages to selected users.
+7. **👤 Profile Viewing**: View profiles of groups and individual users, including own.
+8. **🚫 Block/Unblock**: Block or unblock users to control who can send you messages.
+9. **⚡ Real-Time Chat**: Enjoy real-time messaging with instant updates.
+10. **⌨️ Typing Indicators**: See when someone is typing a message in real-time.
+11. **🔑 Reset Password**: Reset user password using an OTP sent to user's email.
+12. **🤖 Personal AI Chatbot**: Chat with your own AI assistant for instant responses and seamless conversations!
 
 ## Tech Stack
 

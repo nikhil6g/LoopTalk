@@ -3,6 +3,10 @@ const Message = require("../models/messageModel");
 const User = require("../models/userModel");
 const Chat = require("../models/chatModel");
 const BlockList = require("../models/blockListModel");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 //@description     Get all Messages
 //@route           GET /api/Message/:chatId
@@ -274,8 +278,88 @@ const sendMessageHandler = async (senderId, content, chatId) => {
   return messages;
 };
 
+const getAiResponse = async (prompt, senderId, chatId, retryCount = 0) => {
+  var currentMessages = [];
+  const geminiChat = await Chat.findById(chatId);
+  const botId = geminiChat.users.find((member) => member != senderId);
+  const messagelist = await Message.find({
+    chat: chatId,
+  })
+    .sort({ createdAt: -1 })
+    .limit(20);
+
+  messagelist.forEach((message) => {
+    if (message.sender == senderId) {
+      currentMessages.push({
+        role: "user",
+        parts: [{ text: message.content }],
+      });
+    } else {
+      currentMessages.push({
+        role: "model",
+        parts: [{ text: message.content }],
+      });
+    }
+  });
+
+  // reverse currentMessages
+  currentMessages = currentMessages.reverse();
+  try {
+    const chat = model.startChat({
+      history: currentMessages,
+      generationConfig: {
+        maxOutputTokens: 2000,
+      },
+    });
+
+    const result = await chat.sendMessage(prompt);
+    const response = result.response;
+    var responseText = response.text();
+
+    if (responseText.length < 1) {
+      responseText = "Woops!! thats soo long ask me something in short.";
+    }
+
+    const botMessage = await Message.create({
+      chat: chatId,
+      sender: botId,
+      content: responseText,
+    });
+    await botMessage.populate("sender", "name pic");
+    await botMessage.populate("chat");
+    await botMessage.populate({ path: "chat.users", select: "name pic email" });
+    geminiChat.latestMessage = botMessage;
+    await geminiChat.save();
+    console.log(responseText);
+    return botMessage;
+  } catch (err) {
+    // Retry mechanism (maximum 3 attempts)
+    if (retryCount < 3) {
+      console.log(`Retrying AI request... Attempt ${retryCount + 1}`);
+      await new Promise((resolve) => setTimeout(resolve, 3000)); // Wait 3s
+      return getAiResponse(prompt, senderId, chatId, retryCount + 1);
+    }
+    // Fallback response
+    const fallbackResponse = "I'm currently unavailable. Try again later!";
+
+    const botMessage = await Message.create({
+      chat: chatId,
+      sender: botId,
+      content: fallbackResponse,
+    });
+    await botMessage.populate("sender", "name pic");
+    await botMessage.populate("chat");
+    await botMessage.populate({ path: "chat.users", select: "name pic email" });
+    geminiChat.latestMessage = botMessage;
+    await geminiChat.save();
+
+    return botMessage;
+  }
+};
+
 module.exports = {
   allMessages,
   sendMessage,
   sendMessageHandler,
+  getAiResponse,
 };
