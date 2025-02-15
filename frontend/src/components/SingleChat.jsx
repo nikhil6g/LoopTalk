@@ -202,7 +202,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
             {messages &&
               (!selectedChat.isGroupChat ? (
                 <>
-                  {getSender(user, selectedChat.users)}
+                  {getSender(user, selectedChat.users).name}
                   <ProfileModal
                     loggedUser={user}
                     user={getSenderFull(user, selectedChat.users)}

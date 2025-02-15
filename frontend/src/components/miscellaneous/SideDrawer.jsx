@@ -233,7 +233,9 @@ function SideDrawer() {
                 >
                   {notif.chat.isGroupChat
                     ? `New Message in ${notif.chat.chatName}`
-                    : `New Message from ${getSender(user, notif.chat.users)}`}
+                    : `New Message from ${
+                        getSender(user, notif.chat.users).name
+                      }`}
                 </MenuItem>
               ))}
             </MenuList>

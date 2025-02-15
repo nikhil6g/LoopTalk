@@ -28,6 +28,10 @@ Uses Socket.io for real time communication and stores user details in encrypted 
 
 ## Demo
 
+http://looptalk.onrender.com
+
+To see demo, click 'Get Guest User Credentials' button.
+
 ## Run Locally
 
 Clone the project
@@ -83,7 +87,11 @@ Start the Client
 
 ### Search Users
 
+### Chat with gemini bot
+
 ### Create Group Chats
+
+### Create Broadcast Chats
 
 ### Notifications
 

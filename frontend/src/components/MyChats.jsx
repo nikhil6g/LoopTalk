@@ -223,7 +223,7 @@ const MyChats = ({ fetchAgain }) => {
                         !chat.isGroupChat
                           ? !chat.latestMessage
                             ? "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg"
-                            : chat.latestMessage.sender.pic
+                            : getSender(loggedUser, chat.users).pic
                           : chat.isBroadcast
                           ? "/broadcastIcon.png" // Use a custom broadcast image
                           : getRandomGroupImage() // Random group image for group chats
@@ -241,7 +241,7 @@ const MyChats = ({ fetchAgain }) => {
                         color={selectedChat === chat ? "white" : "teal.600"}
                       >
                         {!chat.isGroupChat
-                          ? getSender(loggedUser, chat.users)
+                          ? getSender(loggedUser, chat.users).name
                           : !chat.isBroadcast
                           ? chat.chatName
                           : `Broadcast: ${chat.chatName}`}
