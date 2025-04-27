@@ -12,13 +12,14 @@ const userSchema = mongoose.Schema(
       default:
         "https://static.vecteezy.com/system/resources/thumbnails/010/260/479/small/default-avatar-profile-icon-of-social-media-user-in-clipart-style-vector.jpg",
     },
-    isAdmin: {
-      type: Boolean,
-      required: true,
-      default: false,
-    },
     otp: { type: String, default: null }, // Store the OTP as a string
     otpExpiresAt: { type: Date, default: null }, // Store the expiry time for the OTP
+
+    //for end-to-end encryption
+    publicKey: { type: String, required: true },
+    encryptedPrivateKey: { type: String, required: true },
+    encryptionSalt: { type: String, required: true },
+    encryptionIv: { type: String, required: true },
   },
   { timestamps: true }
 );

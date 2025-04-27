@@ -141,7 +141,16 @@ const checkBlockStatus = asyncHandler(async (req, res) => {
 //@route           POST /api/user/
 //@access          Public
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password, pic } = req.body;
+  const {
+    name,
+    email,
+    password,
+    pic,
+    publicKey,
+    encryptedPrivateKey,
+    salt,
+    iv,
+  } = req.body;
 
   if (!name || !email || !password) {
     res.status(400);
@@ -151,8 +160,18 @@ const registerUser = asyncHandler(async (req, res) => {
   const userExists = await User.findOne({ email });
 
   if (userExists) {
-    res.status(400);
+    res.status(400).json({ message: "User already exists" });
     throw new Error("User already exists");
+  }
+
+  if (!publicKey || !encryptedPrivateKey || !salt || !iv) {
+    res.status(400).json({
+      message:
+        "Please Enter all the Encryption Feilds: publicKeyString, encryptedPrivateKey, salt, iv",
+    });
+    throw new Error(
+      "Please Enter all the Encryption Feilds: publicKeyString, encryptedPrivateKey, salt, iv"
+    );
   }
 
   const user = await User.create({
@@ -160,6 +179,10 @@ const registerUser = asyncHandler(async (req, res) => {
     email,
     password,
     pic,
+    publicKey,
+    encryptedPrivateKey,
+    encryptionSalt: salt,
+    encryptionIv: iv,
   });
 
   if (user) {
@@ -167,9 +190,11 @@ const registerUser = asyncHandler(async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
-      isAdmin: user.isAdmin,
       pic: user.pic,
       token: generateToken(user._id),
+      encryptedPrivateKey: user.encryptedPrivateKey,
+      salt: user.encryptionSalt,
+      iv: user.encryptionIv,
     });
   } else {
     res.status(400);
@@ -188,9 +213,11 @@ const authUser = asyncHandler(async (req, res) => {
       _id: user._id,
       name: user.name,
       email: user.email,
-      isAdmin: user.isAdmin,
       pic: user.pic,
       token: generateToken(user._id),
+      encryptedPrivateKey: user.encryptedPrivateKey || "",
+      salt: user.encryptionSalt || "",
+      iv: user.encryptionIv || "",
     });
   } else {
     res.status(401).json({ message: "Invalid Email or Password" });

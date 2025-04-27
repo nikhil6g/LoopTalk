@@ -11,6 +11,11 @@ import {
 import axios from "axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  generateKeyPair,
+  exportKey,
+  encryptPrivateKey,
+} from "../../utils/cryptoUtils";
 
 const Signup = () => {
   const [show, setShow] = useState(false);
@@ -46,10 +51,21 @@ const Signup = () => {
         isClosable: true,
         position: "bottom",
       });
+      setPicLoading(false);
       return;
     }
     console.log(name, email, password, pic);
+
     try {
+      const keyPair = await generateKeyPair();
+      const publicKey = await exportKey(keyPair.publicKey, true);
+      const privateKey = await exportKey(keyPair.privateKey);
+
+      const { salt, iv, encryptedPrivateKey } = await encryptPrivateKey(
+        privateKey,
+        password
+      );
+
       const config = {
         headers: {
           "Content-type": "application/json",
@@ -62,6 +78,10 @@ const Signup = () => {
           email,
           password,
           pic,
+          publicKey,
+          encryptedPrivateKey,
+          salt,
+          iv,
         },
         config
       );
@@ -74,9 +94,11 @@ const Signup = () => {
         position: "bottom",
       });
       localStorage.setItem("userInfo", JSON.stringify(data));
+
       setPicLoading(false);
       navigate("/chats");
     } catch (error) {
+      setPicLoading(false);
       toast({
         title: "Error Occured!",
         description: error.response.data.message,
@@ -85,7 +107,6 @@ const Signup = () => {
         isClosable: true,
         position: "bottom",
       });
-      setPicLoading(false);
     }
   };
 
