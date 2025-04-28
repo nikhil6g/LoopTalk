@@ -18,6 +18,11 @@ import { useState } from "react";
 import { ChatState } from "../../Context/ChatProvider";
 import UserBadgeItem from "../userAvatar/UserBadgeItem";
 import UserListItem from "../userAvatar/UserListItem";
+import {
+  encryptAESKeyForUsers,
+  generateAESKey,
+  importPublicKey,
+} from "../../utils/cryptoUtils";
 
 const GroupCreationModal = ({ children, isBroadcast = false }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -93,6 +98,22 @@ const GroupCreationModal = ({ children, isBroadcast = false }) => {
     }
 
     try {
+      const rawAESKey = await generateAESKey();
+      const userPublicKeys = {};
+
+      for (const u of selectedUsers) {
+        const publicKey = await importPublicKey(u.publicKey);
+        userPublicKeys[u._id] = publicKey;
+      }
+
+      const myPublicKey = await importPublicKey(user.publicKey);
+      userPublicKeys[user._id] = myPublicKey;
+
+      const encryptedAESKeys = await encryptAESKeyForUsers(
+        rawAESKey,
+        userPublicKeys
+      );
+      console.log(encryptedAESKeys);
       const config = {
         headers: {
           Authorization: `Bearer ${user.token}`,
@@ -104,6 +125,7 @@ const GroupCreationModal = ({ children, isBroadcast = false }) => {
           name: groupChatName,
           users: JSON.stringify(selectedUsers.map((u) => u._id)),
           isBroadcast: isBroadcast,
+          encryptedAESKeys,
         },
         config
       );
@@ -119,7 +141,7 @@ const GroupCreationModal = ({ children, isBroadcast = false }) => {
     } catch (error) {
       toast({
         title: "Failed to Create the Chat!",
-        description: error.response.data,
+        description: error.response ? error.response.data : error.response,
         status: "error",
         duration: 5000,
         isClosable: true,

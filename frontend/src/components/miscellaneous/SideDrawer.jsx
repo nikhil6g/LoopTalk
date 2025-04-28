@@ -34,6 +34,11 @@ import {
   DrawerOverlay,
   Spinner,
 } from "@chakra-ui/react";
+import {
+  encryptAESKeyForUsers,
+  generateAESKey,
+  importPublicKey,
+} from "../../utils/cryptoUtils";
 
 function SideDrawer() {
   const [search, setSearch] = useState("");
@@ -99,11 +104,19 @@ function SideDrawer() {
     }
   };
 
-  const accessChat = async (userId) => {
-    //console.log(userId);
-
+  const accessChat = async (searchUser) => {
     try {
       setLoadingChat(true);
+
+      const rawAESKey = await generateAESKey();
+
+      const myPublicKey = await importPublicKey(user.publicKey);
+      const targetUserPublicKey = await importPublicKey(searchUser.publicKey);
+
+      const encryptedAESKeys = await encryptAESKeyForUsers(rawAESKey, {
+        [user._id]: myPublicKey,
+        [searchUser._id]: targetUserPublicKey,
+      });
       const config = {
         headers: {
           "Content-type": "application/json",
@@ -112,7 +125,7 @@ function SideDrawer() {
       };
       const { data } = await axios.post(
         `${import.meta.env.VITE_APP_API_BASE_URL}/api/chat`,
-        { userId },
+        { userId: searchUser._id, encryptedAESKeys },
         config
       );
 
@@ -121,6 +134,7 @@ function SideDrawer() {
       setLoadingChat(false);
       onClose();
     } catch (error) {
+      setLoadingChat(false);
       toast({
         title: "Error fetching the chat",
         description: error.message,
@@ -316,7 +330,7 @@ function SideDrawer() {
                 <UserListItem
                   key={searchUser._id}
                   user={searchUser}
-                  handleFunction={() => accessChat(searchUser._id)}
+                  handleFunction={() => accessChat(searchUser)}
                 />
               ))
             )}

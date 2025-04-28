@@ -1,12 +1,13 @@
 const asyncHandler = require("express-async-handler");
 const Chat = require("../models/chatModel");
 const User = require("../models/userModel");
+const formatChat = require("../utils/formatChat");
 
 //@description     Create or fetch One to One Chat
 //@route           POST /api/chat/
 //@access          Protected
 const accessChat = asyncHandler(async (req, res) => {
-  const { userId } = req.body;
+  const { userId, encryptedAESKeys } = req.body;
 
   if (!userId) {
     console.log("UserId param not sent with request");
@@ -20,7 +21,7 @@ const accessChat = asyncHandler(async (req, res) => {
       { users: { $elemMatch: { $eq: userId } } },
     ],
   })
-    .populate("users", "-password")
+    .populate("users", "name email pic publicKey")
     .populate("latestMessage");
 
   isChat = await User.populate(isChat, {
@@ -29,21 +30,25 @@ const accessChat = asyncHandler(async (req, res) => {
   });
 
   if (isChat.length > 0) {
-    res.send(isChat[0]);
+    const chatWithMyAESKey = formatChat(isChat[0], req.user._id);
+    res.send(chatWithMyAESKey);
   } else {
     var chatData = {
       chatName: "sender",
       isGroupChat: false,
       users: [req.user._id, userId],
+      encryptedAESKeys: encryptedAESKeys || [],
     };
 
     try {
       const createdChat = await Chat.create(chatData);
       const FullChat = await Chat.findOne({ _id: createdChat._id }).populate(
         "users",
-        "-password"
+        "name email pic publicKey"
       );
-      res.status(200).json(FullChat);
+
+      const chatWithMyAESKey = formatChat(FullChat, req.user._id);
+      res.status(200).json(chatWithMyAESKey);
     } catch (error) {
       res.status(400);
       throw new Error(error.message);
@@ -63,7 +68,7 @@ const fetchChats = asyncHandler(async (req, res) => {
         { $and: [{ isBroadcast: true }, { groupAdmin: req.user._id }] }, // Include broadcasted chats only if the user is the admin
       ],
     })
-      .populate("users", "-password")
+      .populate("users", "name email pic publicKey")
       .populate("groupAdmin", "-password")
       .populate("latestMessage")
       .sort({ updatedAt: -1 });
@@ -72,7 +77,12 @@ const fetchChats = asyncHandler(async (req, res) => {
       path: "latestMessage.sender",
       select: "name pic email",
     });
-    res.status(200).send(results);
+
+    const chatsWithMyAESKey = results.map((chatDoc) =>
+      formatChat(chatDoc, req.user._id)
+    );
+
+    res.status(200).send(chatsWithMyAESKey);
   } catch (error) {
     console.log("error in fetching chat: " + error.message);
     res.status(400);
@@ -84,11 +94,14 @@ const fetchChats = asyncHandler(async (req, res) => {
 //@route           POST /api/chat/group
 //@access          Protected
 const createGroupChat = asyncHandler(async (req, res) => {
-  if (!req.body.users || !req.body.name) {
+  var users = JSON.parse(req.body.users);
+  const name = req.body.name;
+  const isBroadcast = req.body.isBroadcast;
+  const encryptedAESKeys = req.body.encryptedAESKeys;
+
+  if (!users || !name) {
     return res.status(400).send({ message: "Please Fill all the feilds" });
   }
-
-  var users = JSON.parse(req.body.users);
 
   if (users.length < 2) {
     return res
@@ -96,22 +109,24 @@ const createGroupChat = asyncHandler(async (req, res) => {
       .send("More than 2 users are required to form a group chat");
   }
 
-  users.push(req.user);
-
+  users.push(req.user._id);
+  console.log(users);
   try {
     const groupChat = await Chat.create({
-      chatName: req.body.name,
-      users: users,
+      chatName: name,
+      users,
       isGroupChat: true,
-      groupAdmin: req.user,
-      isBroadcast: req.body.isBroadcast,
+      groupAdmin: req.user._id,
+      isBroadcast,
+      encryptedAESKeys: encryptedAESKeys || [],
     });
 
     const fullGroupChat = await Chat.findOne({ _id: groupChat._id })
-      .populate("users", "-password")
+      .populate("users", "name email pic publicKey")
       .populate("groupAdmin", "-password");
 
-    res.status(200).json(fullGroupChat);
+    const fullGroupChatWithMyAESKey = formatChat(fullGroupChat, req.user._id);
+    res.status(200).json(fullGroupChatWithMyAESKey);
   } catch (error) {
     res.status(400);
     throw new Error(error.message);
@@ -133,7 +148,7 @@ const renameGroup = asyncHandler(async (req, res) => {
       new: true,
     }
   )
-    .populate("users", "-password")
+    .populate("users", "name email pic publicKey")
     .populate("groupAdmin", "-password");
 
   if (!updatedChat) {
@@ -161,7 +176,7 @@ const removeFromGroup = asyncHandler(async (req, res) => {
       new: true,
     }
   )
-    .populate("users", "-password")
+    .populate("users", "name email pic publicKey")
     .populate("groupAdmin", "-password");
 
   if (!removed) {
@@ -189,7 +204,7 @@ const addToGroup = asyncHandler(async (req, res) => {
       new: true,
     }
   )
-    .populate("users", "-password")
+    .populate("users", "name email pic publicKey")
     .populate("groupAdmin", "-password");
 
   if (!added) {

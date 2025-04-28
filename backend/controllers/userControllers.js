@@ -215,6 +215,7 @@ const authUser = asyncHandler(async (req, res) => {
       email: user.email,
       pic: user.pic,
       token: generateToken(user._id),
+      publicKey: user.publicKey || "",
       encryptedPrivateKey: user.encryptedPrivateKey || "",
       salt: user.encryptionSalt || "",
       iv: user.encryptionIv || "",

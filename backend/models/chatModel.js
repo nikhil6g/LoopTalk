@@ -11,6 +11,13 @@ const chatModel = mongoose.Schema(
       ref: "Message",
     },
     groupAdmin: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+
+    encryptedAESKeys: [
+      {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        encryptedAESKey: { type: String }, // Encrypted AES key (Base64 or hex encoded string)
+      },
+    ],
   },
   { timestamps: true }
 );
