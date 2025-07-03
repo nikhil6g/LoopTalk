@@ -48,6 +48,7 @@ function SideDrawer() {
     setNotification,
     chats,
     setChats,
+    socket,
   } = ChatState();
   //console.log(user.pic);
   const toast = useToast();
@@ -55,6 +56,7 @@ function SideDrawer() {
   const navigate = useNavigate();
 
   const logoutHandler = () => {
+    if (socket && socket.connected) socket.disconnect();
     localStorage.removeItem("userInfo");
     navigate("/");
   };

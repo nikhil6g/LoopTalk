@@ -21,22 +21,27 @@ import ScrollableChat from "./ScrollableChat";
 import Lottie from "lottie-react";
 import animationData from "../animations/typing.json";
 
-import io from "socket.io-client";
 import GroupProfileModal from "./miscellaneous/GroupProfileModal";
 import { ChatState } from "../Context/ChatProvider";
-var socket, selectedChatCompare;
+var selectedChatCompare;
 
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
-  const [socketConnected, setSocketConnected] = useState(false);
   const [typing, setTyping] = useState(false);
   const [istyping, setIsTyping] = useState(false);
   const toast = useToast();
 
-  const { selectedChat, setSelectedChat, user, notification, setNotification } =
-    ChatState();
+  const {
+    selectedChat,
+    setSelectedChat,
+    user,
+    notification,
+    setNotification,
+    socket,
+    socketConnected,
+  } = ChatState();
 
   const fetchMessages = async () => {
     if (!selectedChat) return;
@@ -88,18 +93,26 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   };
 
   useEffect(() => {
-    socket = io(import.meta.env.VITE_APP_SOKCET_ENDPOINT, {
-      auth: {
-        token: user.token,
-      },
-    });
+    if (!socket) return;
 
-    socket.emit("setup", user);
-    socket.on("connected", () => setSocketConnected(true));
     socket.on("typing", () => setIsTyping(true));
     socket.on("stop typing", () => setIsTyping(false));
     socket.on("Message sended", (message) => {
       setMessages((prevMessages) => [...prevMessages, message]);
+    });
+
+    socket.on("message recieved", (newMessageRecieved) => {
+      if (
+        !selectedChatCompare || // if chat is not selected or doesn't match current chat
+        selectedChatCompare._id !== newMessageRecieved.chat._id
+      ) {
+        if (!notification.includes(newMessageRecieved)) {
+          setNotification([newMessageRecieved, ...notification]);
+          setFetchAgain(!fetchAgain);
+        }
+      } else {
+        setMessages((prevMessages) => [...prevMessages, newMessageRecieved]);
+      }
     });
 
     socket.on("Error", (errorData) => {
@@ -133,8 +146,15 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         });
       }
     });
-    // eslint-disable-next-line
-  }, []);
+
+    return () => {
+      socket.off("typing");
+      socket.off("stop typing");
+      socket.off("Message sended");
+      socket.off("message recieved");
+      socket.off("Error");
+    };
+  }, [socket]);
 
   useEffect(() => {
     fetchMessages();
@@ -142,22 +162,6 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     selectedChatCompare = selectedChat;
     // eslint-disable-next-line
   }, [selectedChat]);
-
-  useEffect(() => {
-    socket.on("message recieved", (newMessageRecieved) => {
-      if (
-        !selectedChatCompare || // if chat is not selected or doesn't match current chat
-        selectedChatCompare._id !== newMessageRecieved.chat._id
-      ) {
-        if (!notification.includes(newMessageRecieved)) {
-          setNotification([newMessageRecieved, ...notification]);
-          setFetchAgain(!fetchAgain);
-        }
-      } else {
-        setMessages((prevMessages) => [...prevMessages, newMessageRecieved]);
-      }
-    });
-  }, []);
 
   const typingHandler = (e) => {
     setNewMessage(e.target.value);
