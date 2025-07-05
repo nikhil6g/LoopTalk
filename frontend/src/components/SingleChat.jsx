@@ -23,7 +23,7 @@ import animationData from "../animations/typing.json";
 
 import GroupProfileModal from "./miscellaneous/GroupProfileModal";
 import { ChatState } from "../Context/ChatProvider";
-var selectedChatCompare;
+import { useRef } from "react";
 
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const [messages, setMessages] = useState([]);
@@ -31,6 +31,10 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const [newMessage, setNewMessage] = useState("");
   const [typing, setTyping] = useState(false);
   const [istyping, setIsTyping] = useState(false);
+  const lastRoomRef = useRef(null);
+  const switchTimeoutRef = useRef();
+  const selectedChatCompareRef = useRef();
+
   const toast = useToast();
 
   const {
@@ -42,6 +46,18 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     socket,
     socketConnected,
   } = ChatState();
+
+  //debouncing
+  const switchChat = (newRoomId) => {
+    clearTimeout(switchTimeoutRef.current);
+    switchTimeoutRef.current = setTimeout(() => {
+      if (lastRoomRef.current) {
+        socket.emit("leave chat", lastRoomRef.current);
+      }
+      socket.emit("join chat", newRoomId);
+      lastRoomRef.current = newRoomId;
+    }, 300);
+  };
 
   const fetchMessages = async () => {
     if (!selectedChat) return;
@@ -64,7 +80,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       setMessages(data);
       setLoading(false);
 
-      socket.emit("join chat", selectedChat._id);
+      switchChat(selectedChat._id);
     } catch (error) {
       if (error.response.status === 403) {
         toast({
@@ -103,8 +119,8 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
     socket.on("message recieved", (newMessageRecieved) => {
       if (
-        !selectedChatCompare || // if chat is not selected or doesn't match current chat
-        selectedChatCompare._id !== newMessageRecieved.chat._id
+        !selectedChatCompareRef.current || // if chat is not selected or doesn't match current chat
+        selectedChatCompareRef.current._id !== newMessageRecieved.chat._id
       ) {
         if (!notification.includes(newMessageRecieved)) {
           setNotification([newMessageRecieved, ...notification]);
@@ -159,7 +175,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   useEffect(() => {
     fetchMessages();
 
-    selectedChatCompare = selectedChat;
+    selectedChatCompareRef.current = selectedChat;
     // eslint-disable-next-line
   }, [selectedChat]);
 
