@@ -107,7 +107,13 @@ io.on("connection", (socket) => {
   socket.on("typing", (room) => socket.in(room).emit("typing"));
   socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
 
-  const handleNewMessage = async (senderId, content, chatId) => {
+  const handleNewMessage = async (
+    senderId,
+    content,
+    chatId,
+    mediaUrl,
+    mediaType
+  ) => {
     try {
       const currentChat = await Chat.findById(chatId).populate("users");
       //handle ai chat bot response
@@ -145,7 +151,13 @@ io.on("connection", (socket) => {
         return;
       }
 
-      let messages = await sendMessageHandler(senderId, content, chatId);
+      let messages = await sendMessageHandler(
+        senderId,
+        content,
+        mediaUrl,
+        mediaType,
+        chatId
+      );
       if (messages.length > 1) {
         // this is broadcast message , and messages[0] is the group chat for the broadcast message
         messages = messages.slice(1);
@@ -177,9 +189,9 @@ io.on("connection", (socket) => {
   };
 
   socket.on("New message", (newMessage) => {
-    const { content, chatId, senderId } = newMessage;
+    const { content, chatId, senderId, mediaUrl, mediaType } = newMessage;
 
-    handleNewMessage(senderId, content, chatId);
+    handleNewMessage(senderId, content, chatId, mediaUrl, mediaType);
   });
 
   socket.on("disconnect", () => {

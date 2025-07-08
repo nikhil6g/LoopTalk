@@ -170,8 +170,14 @@ const sendMessage = asyncHandler(async (req, res) => {
   }
 });
 
-const sendMessageHandler = async (senderId, content, chatId) => {
-  if (!content || !chatId) {
+const sendMessageHandler = async (
+  senderId,
+  content,
+  mediaUrl,
+  mediaType,
+  chatId
+) => {
+  if ((!content && !mediaUrl) || !chatId) {
     throw new Error("Invalid data passed into request.");
   }
 
@@ -216,8 +222,20 @@ const sendMessageHandler = async (senderId, content, chatId) => {
       throw new Error(`${receiver.name} blocked you.`);
     }
   }
+
+  let messageType = "text";
+  if (content && mediaUrl) messageType = "media+text";
+  else if (mediaUrl && !content) messageType = "media";
+
   const messages = [];
-  const newMessage = { sender: senderId, content: content, chat: chatId };
+  const newMessage = {
+    sender: senderId,
+    content: content,
+    chat: chatId,
+    type: messageType,
+    media: mediaUrl ? { url: mediaUrl, type: mediaType } : undefined,
+  };
+
   let message = await Message.create(newMessage);
 
   await message.populate("sender", "name pic");
@@ -264,7 +282,14 @@ const sendMessageHandler = async (senderId, content, chatId) => {
         isChat = isChat[0];
       }
 
-      const newMessage = { sender: senderId, content, chat: isChat._id };
+      const newMessage = {
+        sender: senderId,
+        content: content,
+        chat: isChat._id,
+        type: messageType,
+        media: mediaUrl ? { url: mediaUrl, type: mediaType } : undefined,
+      };
+
       let message = await Message.create(newMessage);
       await message.populate("sender", "name pic");
       await message.populate("chat");
