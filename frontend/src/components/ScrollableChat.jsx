@@ -7,6 +7,7 @@ import {
   isSameUser,
 } from "../config/ChatLogics";
 import { ChatState } from "../Context/ChatProvider";
+import MessageBubble from "./MessageBubble";
 
 const ScrollableChat = ({ messages }) => {
   const { user } = ChatState();
@@ -41,7 +42,7 @@ const ScrollableChat = ({ messages }) => {
                 maxWidth: "75%",
               }}
             >
-              {m.content}
+              <MessageBubble message={m} />
             </span>
           </div>
         ))}

@@ -31,6 +31,7 @@ import { useRef } from "react";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { uploadToCloudinary } from "../../config/actions";
 
 const ProfileModal = ({ user, children, loggedUser }) => {
   const [isBlocked, setIsBlocked] = useState(false);
@@ -131,29 +132,15 @@ const ProfileModal = ({ user, children, loggedUser }) => {
       setUploadProgress(10); // Initial progress
 
       // 1. Upload to Cloudinary
-      const data = new FormData();
-      data.append("file", pics);
-      data.append(
-        "upload_preset",
-        import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
-      );
-      data.append("folder", "loop-talk-images");
-      const cloudinaryResponse = await axios.post(
-        `https://api.cloudinary.com/v1_1/${
-          import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
-        }/image/upload`,
-        data,
-        {
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 50) / progressEvent.total
-            );
-            setUploadProgress(10 + percentCompleted); // First half of progress
-          },
-        }
+      const { url, resource_type } = await uploadToCloudinary(
+        pics,
+        "loop-talk-images",
+        setUploadProgress,
+        10
       );
       setUploadProgress(60); // Cloudinary upload complete
-      console.log(cloudinaryResponse.data.url);
+
+      console.log(url);
       // 2. Update backend
       const config = {
         headers: {
@@ -162,7 +149,7 @@ const ProfileModal = ({ user, children, loggedUser }) => {
       };
       await axios.put(
         `${import.meta.env.VITE_APP_API_BASE_URL}/api/user/updateprofile`,
-        { pic: cloudinaryResponse.data.url.toString() },
+        { pic: url.toString() },
         config
       );
 

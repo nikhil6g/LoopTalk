@@ -24,6 +24,7 @@ import animationData from "../animations/typing.json";
 import GroupProfileModal from "./miscellaneous/GroupProfileModal";
 import { ChatState } from "../Context/ChatProvider";
 import { useRef } from "react";
+import { uploadToCloudinary } from "../config/actions";
 
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const [messages, setMessages] = useState([]);
@@ -31,9 +32,12 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const [newMessage, setNewMessage] = useState("");
   const [typing, setTyping] = useState(false);
   const [istyping, setIsTyping] = useState(false);
+  const [attachedFile, setAttachedFile] = useState(null);
+
   const lastRoomRef = useRef(null);
   const switchTimeoutRef = useRef();
   const selectedChatCompareRef = useRef();
+  const fileInputRef = useRef(null);
 
   const toast = useToast();
 
@@ -96,15 +100,48 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   };
 
   const sendMessage = async (event) => {
-    if (newMessage) {
-      socket.emit("stop typing", selectedChat._id);
-      const message = {
-        senderId: user._id,
-        content: newMessage,
-        chatId: selectedChat._id,
-      };
-      setNewMessage("");
-      socket.emit("New message", message);
+    if (!newMessage && !attachedFile) return;
+
+    socket.emit("stop typing", selectedChat._id);
+
+    let mediaUrl = null;
+    let mediaType = null;
+
+    if (attachedFile) {
+      try {
+        const { url, resource_type } = await uploadToCloudinary(attachedFile);
+        mediaUrl = url;
+        mediaType = resource_type;
+        console.log(`url is ${url} \n media type is ${mediaType}`);
+      } catch (error) {
+        toast({
+          title: "Upload failed!",
+          description: error.message || "Please try again.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+          position: "bottom",
+        });
+        return;
+      }
+    }
+    const message = {
+      content: newMessage,
+      chatId: selectedChat._id,
+      senderId: user._id,
+      mediaUrl,
+      mediaType,
+    };
+    setNewMessage("");
+    setAttachedFile(null);
+
+    socket.emit("New message", message);
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setAttachedFile(file);
     }
   };
 
@@ -114,6 +151,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     socket.on("typing", () => setIsTyping(true));
     socket.on("stop typing", () => setIsTyping(false));
     socket.on("Message sended", (message) => {
+      console.log(message);
       setMessages((prevMessages) => [...prevMessages, message]);
     });
 
@@ -273,7 +311,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
               {istyping ? (
                 <div>
                   <Lottie
-                    animationData={animationData} // directly pass animationData here
+                    animationData={animationData}
                     loop={true}
                     autoplay={true}
                     rendererSettings={{ preserveAspectRatio: "xMidYMid slice" }}
@@ -288,12 +326,20 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                 <></>
               )}
               <Box display="flex" alignItems="center">
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                />
                 <IconButton
                   icon={<AttachmentIcon />}
                   aria-label="Attach"
                   size="lg"
                   colorScheme="teal"
                   mr={2}
+                  onClick={() => fileInputRef.current.click()}
                 />
                 <Input
                   variant="filled"
@@ -318,6 +364,11 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                   onClick={sendMessage}
                 />
               </Box>
+              {attachedFile && (
+                <Text fontSize="sm" color="gray.600" mt={1} ml={2}>
+                  📎 Attached: {attachedFile.name}
+                </Text>
+              )}
             </FormControl>
           </Box>
         </>
