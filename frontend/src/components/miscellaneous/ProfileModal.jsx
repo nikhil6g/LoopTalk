@@ -32,12 +32,17 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { uploadToCloudinary } from "../../config/actions";
+import { ChatState } from "../../Context/ChatProvider";
 
-const ProfileModal = ({ user, children, loggedUser }) => {
+const ProfileModal = ({ targetUser, children }) => {
+  const { user: loggedUser, setUser } = ChatState();
+
   const [isBlocked, setIsBlocked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [editMode, setEditMode] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
 
   const navigate = useNavigate();
   const toast = useToast();
@@ -58,8 +63,8 @@ const ProfileModal = ({ user, children, loggedUser }) => {
           Authorization: `Bearer ${loggedUser.token}`,
         },
       };
-      console.log(`Bearer ${loggedUser.token}`);
-      const userId = user._id;
+      //console.log(`Bearer ${loggedUser.token}`);
+      const userId = targetUser._id;
 
       await axios.post(
         `${import.meta.env.VITE_APP_API_BASE_URL}/api/user/block`,
@@ -70,8 +75,8 @@ const ProfileModal = ({ user, children, loggedUser }) => {
       toast({
         title: isBlocked ? "User Unblocked" : "User Blocked",
         description: isBlocked
-          ? `You have unblocked ${user.name}.`
-          : `You have blocked ${user.name}.`,
+          ? `You have unblocked ${targetUser.name}.`
+          : `You have blocked ${targetUser.name}.`,
         status: isBlocked ? "info" : "warning",
         duration: 3000,
         isClosable: true,
@@ -84,8 +89,8 @@ const ProfileModal = ({ user, children, loggedUser }) => {
       toast({
         title: "Error Occured!",
         description: isBlocked
-          ? `Failed to unblock ${user.name}.`
-          : `Failed to block ${user.name}.`,
+          ? `Failed to unblock ${targetUser.name}.`
+          : `Failed to block ${targetUser.name}.`,
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -106,7 +111,7 @@ const ProfileModal = ({ user, children, loggedUser }) => {
       const { data } = await axios.get(
         `${
           import.meta.env.VITE_APP_API_BASE_URL
-        }/api/user/check-block-status?userId=${user._id}`,
+        }/api/user/check-block-status?userId=${targetUser._id}`,
         config
       );
 
@@ -117,12 +122,57 @@ const ProfileModal = ({ user, children, loggedUser }) => {
   };
 
   useEffect(() => {
-    if (loggedUser._id !== user._id) {
+    if (loggedUser._id !== targetUser._id) {
       initialBlockCheck();
     }
-  }, [loggedUser._id, user._id]);
+  }, [loggedUser._id, targetUser._id]);
 
-  const onChangeUsername = () => {};
+  const onChangeUsername = async () => {
+    if (!newUsername || newUsername === loggedUser.name) {
+      toast({
+        title: "Invalid Username",
+        description: "Please enter a new valid username.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+        position: "top",
+      });
+      return;
+    }
+
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${loggedUser.token}`,
+        },
+      };
+
+      await axios.put(
+        `${import.meta.env.VITE_APP_API_BASE_URL}/api/user/change-username`,
+        { newUsername },
+        config
+      );
+
+      const updated = { ...loggedUser, name: newUsername };
+      setUser(updated);
+      localStorage.setItem("userInfo", JSON.stringify(updated));
+    } catch (error) {
+      toast({
+        title: "Failed to update username",
+        description:
+          error.response?.data?.message ||
+          error.message ||
+          "please try again later",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+        position: "top",
+      });
+    } finally {
+      setNewUsername("");
+      setEditMode(false);
+    }
+  };
 
   const onUpdateProfilePic = async (pics) => {
     if (!pics) return;
@@ -148,7 +198,7 @@ const ProfileModal = ({ user, children, loggedUser }) => {
         },
       };
       await axios.put(
-        `${import.meta.env.VITE_APP_API_BASE_URL}/api/user/updateprofile`,
+        `${import.meta.env.VITE_APP_API_BASE_URL}/api/user/update-profile`,
         { pic: url.toString() },
         config
       );
@@ -156,13 +206,9 @@ const ProfileModal = ({ user, children, loggedUser }) => {
       setUploadProgress(100);
       await new Promise((resolve) => setTimeout(resolve, 500)); // Show completion briefly
 
-      toast({
-        title: "🎉 Profile Picture Updated!",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-        position: "bottom",
-      });
+      const updatedUser = { ...loggedUser, pic: url };
+      localStorage.setItem("userInfo", JSON.stringify(updatedUser));
+      setUser(updatedUser);
     } catch (error) {
       toast({
         title: "⚠️ Upload Failed",
@@ -217,9 +263,8 @@ const ProfileModal = ({ user, children, loggedUser }) => {
             display="flex"
             justifyContent="center"
             color="white"
-            textTransform="uppercase"
           >
-            {user.name}
+            {targetUser.name}
           </ModalHeader>
           <ModalCloseButton color="white" />
           <ModalBody
@@ -243,15 +288,15 @@ const ProfileModal = ({ user, children, loggedUser }) => {
                 <Image
                   borderRadius="full"
                   boxSize="150px"
-                  src={user.pic}
-                  alt={user.name}
+                  src={targetUser.pic}
+                  alt={targetUser.name}
                   boxShadow="xl"
                   _hover={{
                     transform: "scale(1.1)",
                     transition: "all 0.3s ease-in-out",
                   }}
                 />
-                {loggedUser._id === user._id && (
+                {loggedUser._id === targetUser._id && (
                   <>
                     <VisuallyHidden>
                       <Input
@@ -316,22 +361,47 @@ const ProfileModal = ({ user, children, loggedUser }) => {
               mb={2}
               textAlign="center"
             >
-              Email: {user.email}
+              Email: {targetUser.email}
             </Text>
 
-            {loggedUser._id === user._id && (
-              <VStack spacing={4} mt={6} w="full">
-                {/* Change Username */}
-                <Button
-                  bg="white"
-                  color="teal.600"
-                  _hover={{ bg: "teal.100" }}
-                  w="full"
-                  fontWeight="bold"
-                  onClick={onChangeUsername}
-                >
-                  Change Username
-                </Button>
+            {loggedUser._id === targetUser._id && (
+              <VStack spacing={4} mt={4} w="full">
+                {editMode ? (
+                  <>
+                    <Input
+                      placeholder="Enter new username"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      _placeholder={{ color: "white" }}
+                      color="white"
+                      bg="teal.700"
+                      _focus={{
+                        borderColor: "white",
+                        boxShadow: "0 0 0 1px white",
+                      }}
+                    />
+                    <Box display="flex" justifyContent="center" gap={4} mt={2}>
+                      <Button colorScheme="teal" onClick={onChangeUsername}>
+                        Save
+                      </Button>
+                      <Button
+                        variant="outline"
+                        color="white"
+                        onClick={() => setEditMode(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </Box>
+                  </>
+                ) : (
+                  <Button
+                    onClick={() => setEditMode(true)}
+                    colorScheme="teal"
+                    w="full"
+                  >
+                    Change Username
+                  </Button>
+                )}
 
                 {/* Reset Password */}
                 <Button
@@ -350,7 +420,8 @@ const ProfileModal = ({ user, children, loggedUser }) => {
             )}
           </ModalBody>
           <ModalFooter display="flex" justifyContent="space-between">
-            {loggedUser._id !== user._id && !user.email.endsWith("bot") ? (
+            {loggedUser._id !== targetUser._id &&
+            !targetUser.email.endsWith("bot") ? (
               <Button
                 bg={isBlocked ? "teal.800" : "red.500"}
                 color="white"
@@ -388,7 +459,7 @@ const ProfileModal = ({ user, children, loggedUser }) => {
             </AlertDialogHeader>
             <AlertDialogBody>
               Are you sure you want to {isBlocked ? "unblock" : "block"}{" "}
-              {user.name}? This action can be undone later.
+              {targetUser.name}? This action can be undone later.
             </AlertDialogBody>
             <AlertDialogFooter>
               <Button ref={cancelRef} onClick={onBlockClose}>

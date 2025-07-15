@@ -6,6 +6,7 @@ const {
   toggleBlockUser,
   checkBlockStatus,
   updateProfile,
+  changeUsername,
   generateOtpInMail,
   verifyOtp,
   resetPassword,
@@ -19,7 +20,10 @@ router.route("/block").post(protect, toggleBlockUser);
 router.route("/check-block-status").get(protect, checkBlockStatus);
 router.route("/").get(protect, allUsers);
 router.route("/").post(registerUser);
-router.put("/updateprofile", protect, updateProfile);
+
+router.put("/update-profile", protect, updateProfile);
+router.put("/change-username", protect, changeUsername);
+
 router.post("/generate-otp", generateOtpInMail);
 router.post("/verify-otp", verifyOtp);
 router.post("/reset-password", resetPassword);

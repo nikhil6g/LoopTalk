@@ -259,7 +259,7 @@ function SideDrawer() {
               />
             </MenuButton>
             <MenuList>
-              <ProfileModal user={user} loggedUser={user}>
+              <ProfileModal targetUser={user}>
                 <MenuItem fontWeight="medium" _hover={{ bg: "teal.100" }}>
                   My Profile
                 </MenuItem>

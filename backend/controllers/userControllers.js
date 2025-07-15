@@ -27,7 +27,7 @@ const allUsers = asyncHandler(async (req, res) => {
 //@access          Protected
 const updateProfile = asyncHandler(async (req, res) => {
   const { pic } = req.body;
-  console.log(pic);
+
   if (!pic) {
     return res
       .status(400)
@@ -41,6 +41,30 @@ const updateProfile = asyncHandler(async (req, res) => {
       res
         .status(200)
         .json({ message: "Profile picture updated successfully." });
+    } else {
+      res.status(404).json({ message: "User not found." });
+    }
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
+  }
+});
+
+//@description     update the user's profile picture
+//@route           PUT /api/updateprofile
+//@access          Protected
+const changeUsername = asyncHandler(async (req, res) => {
+  const { newUsername } = req.body;
+  if (!newUsername) {
+    return res.status(400).json({ message: "Please provide a username." });
+  }
+  const user = await User.findById(req.user._id);
+  try {
+    if (user) {
+      user.name = newUsername;
+      await user.save();
+      res.status(200).json({ message: "Username changed successfully." });
     } else {
       res.status(404).json({ message: "User not found." });
     }
@@ -329,6 +353,7 @@ module.exports = {
   authUser,
   checkBlockStatus,
   updateProfile,
+  changeUsername,
   generateOtpInMail,
   verifyOtp,
   resetPassword,
