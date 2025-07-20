@@ -16,10 +16,10 @@ const { protect } = require("../middleware/authMiddleware");
 const router = express.Router();
 
 router.post("/login", authUser);
-router.route("/block").post(protect, toggleBlockUser);
-router.route("/check-block-status").get(protect, checkBlockStatus);
-router.route("/").get(protect, allUsers);
-router.route("/").post(registerUser);
+router.post("/block", protect, toggleBlockUser);
+router.get("/check-block-status", protect, checkBlockStatus);
+router.get("/", protect, allUsers);
+router.post("/", registerUser);
 
 router.put("/update-profile", protect, updateProfile);
 router.put("/change-username", protect, changeUsername);
